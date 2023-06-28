@@ -1,5 +1,10 @@
 # Count tokens
 
+![img](https://img.shields.io/pypi/v/count-tokens.svg)
+![](https://img.shields.io/pypi/pyversions/count-tokens.svg)
+![](https://img.shields.io/pypi/dm/count-tokens.svg)
+
+
 Simple tool that have one purpose - count tokens in a text file.
 
 ## Requirements
