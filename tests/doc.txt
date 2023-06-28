@@ -1,0 +1,1 @@
+In this blog post, we will explore how to count the number of tokens in a given text using OpenAI's tokenizer, called `tiktoken`. Whether you're a seasoned Python developer or just getting started with NLP, this guide will provide you with a step-by-step process to accurately determine the token count of your text.
