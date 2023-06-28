@@ -8,9 +8,9 @@ readme = "README.md"
 packages = [{include = "count_tokens"}]
 
 keywords = ["count", "tokens", "toktoken", "openai", "tokenizer"]
-homepage = "https://github.com/izikeros/todo-extractor"
-repository = "https://github.com/izikeros/todo-extractor"
-documentation = "https://github.com/izikeros/todo-extractor"
+homepage = "https://github.com/izikeros/count_tokens"
+repository = "https://github.com/izikeros/count_tokens"
+documentation = "https://github.com/izikeros/count_tokens"
 
 classifiers = [
     "Development Status :: 3 - Alpha",
