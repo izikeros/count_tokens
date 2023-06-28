@@ -1,6 +1,6 @@
 # Count tokens
 
-Simple tools that have one purpose - count tokens in a text file.
+Simple tool that have one purpose - count tokens in a text file.
 
 ## Requirements
 
