@@ -11,7 +11,6 @@ Simple tool that have one purpose - count tokens in a text file.
 
 This package is using [tiktoken](https://github.com/openai/tiktoken) library for tokenization.
 
-```shell
 
 ## Installation
 For usage from comman line install the package in isolated environement with pipx:
