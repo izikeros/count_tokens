@@ -7,6 +7,7 @@
 
 Simple tool that have one purpose - count tokens in a text file.
 
+
 ## Requirements
 
 This package is using [tiktoken](https://github.com/openai/tiktoken) library for tokenization.
@@ -60,6 +61,33 @@ to use token-count with other than default `cl100k_base` encoding use the additi
 
 ```shell
 $ count-tokens document.txt -e r50k_base
+```
+
+## Approximate number of tokens
+In case you need the results a bit faster and you don't need the exact number of tokens you can use the `--approx` parameter with `w` to have approximation based on number of words or `c` to have approximation based on number of characters.
+
+```shell
+$ count-tokens document.txt --approx w
+```
+
+It is based on assumption that there is 4/3 (1 and 1/3) tokens per word and 4 characters per token.
+
+
+```shell
+
+## Programmatic usage
+
+```python
+from count_tokens import count_tokens_in_file
+
+num_tokens = count_tokens_in_file("document.txt")
+```
+
+```python
+from count_tokens import count_tokens_in_string
+
+num_tokens = count_tokens_in_string("This is a string.")
+
 ```
 
 ## Related Projects
