@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "count-tokens"
-version = "0.6.0"
+version = "0.7.0"
 description = "Count number of tokens in the text file using toktoken tokenizer from OpenAI."
 authors = ["Krystian Safjan <ksafjan@gmail.com>"]
 license = "MIT"
