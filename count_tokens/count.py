@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 import argparse
-
 import pathlib
+
 import tiktoken
 
-TOKENS_PER_WORD = 4.0/3.0
+TOKENS_PER_WORD = 4.0 / 3.0
 CHARACTERS_PER_TOKEN = 4.0
+
+
 def count_tokens_in_string(string: str, encoding_name: str = "cl100k_base") -> int:
     """Return the number of tokens in a text string.
 
     Args:
         string: The text string to count the tokens in.
-        encoding_name: The name of the encoding to use.
+        encoding_name: The name of the encoding to use. Default: cl100k_base
 
     Returns:
         The number of tokens in the text string.
@@ -20,12 +22,14 @@ def count_tokens_in_string(string: str, encoding_name: str = "cl100k_base") -> i
     return len(encoding.encode(string))
 
 
-def count_tokens_in_file(file_path: str, encoding_name: str, approximate: str = None) -> int:
+def count_tokens_in_file(
+    file_path: str, encoding_name: str = "cl100k_base", approximate: str = None
+) -> int:
     """Return the number of tokens in a text file.
 
     Args:
         file_path: The path to the text file to count the tokens in.
-        encoding_name: The name of the encoding to use.
+        encoding_name: The name of the encoding to use. Default: cl100k_base
         approximate: Approximate the number of tokens without tokenizing. Base on: w - words, c - characters
 
     Returns:
@@ -42,6 +46,11 @@ def count_tokens_in_file(file_path: str, encoding_name: str, approximate: str = 
 
 
 def main():
+    """Run the command line interface.
+
+    Returns:
+        None
+    """
     parser = argparse.ArgumentParser(
         description="Count the number of tokens in a text file."
     )
@@ -72,7 +81,9 @@ def main():
     encoding_name = args.encoding
     approximate = args.approx
 
-    num_tokens = count_tokens_in_file(file_path, encoding_name, approximate)
+    num_tokens = count_tokens_in_file(
+        file_path=file_path, encoding_name=encoding_name, approximate=approximate
+    )
     if not args.quiet:
         print(f"File: {file_path}")
         print(f"Encoding: {encoding_name}")

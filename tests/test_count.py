@@ -1,8 +1,8 @@
 import subprocess
 
 import pytest
-
-from count import count_tokens_in_file, count_tokens_in_string
+from count import count_tokens_in_file
+from count import count_tokens_in_string
 
 
 # TODO: KS: 2023-06-28: not implemented yet

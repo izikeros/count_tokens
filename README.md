@@ -78,17 +78,25 @@ It is based on assumption that there is 4/3 (1 and 1/3) tokens per word and 4 ch
 ## Programmatic usage
 
 ```python
-from count_tokens import count_tokens_in_file
+from count_tokens.count import count_tokens_in_file
 
 num_tokens = count_tokens_in_file("document.txt")
 ```
 
 ```python
-from count_tokens import count_tokens_in_string
+from count_tokens.count import count_tokens_in_string
 
 num_tokens = count_tokens_in_string("This is a string.")
-
 ```
+
+for both functions you can use `encoding` parameter to specify the encoding used by the model:
+
+```python
+from count_tokens.count import count_tokens_in_string
+
+num_tokens = count_tokens_in_string("This is a string.", encoding="cl100k_base")
+```
+Default value for `encoding` is `cl100k_base`.
 
 ## Related Projects
 - [tiktoken](https://github.com/openai/tiktoken) - tokenization library used by this package
