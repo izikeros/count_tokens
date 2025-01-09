@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "count-tokens"
-version = "0.7.0"
+version = "0.7.1"
 description = "Count number of tokens in the text file using toktoken tokenizer from OpenAI."
 authors = ["Krystian Safjan <ksafjan@gmail.com>"]
 license = "MIT"
@@ -13,7 +13,7 @@ repository = "https://github.com/izikeros/count_tokens"
 documentation = "https://github.com/izikeros/count_tokens"
 
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
