@@ -107,7 +107,7 @@ def count_tokens_in_large_file(
 
 def count_tokens_in_directory(
     directory_path: str,
-    file_patterns: List[str] = ["*.txt", "*.py", "*.md"],
+    file_patterns: List[str] = None,
     recursive: bool = False,
     encoding_name: str = "cl100k_base",
     use_streaming: bool = False,
@@ -120,7 +120,7 @@ def count_tokens_in_directory(
 
     Args:
         directory_path: Path to directory to scan
-        file_patterns: List of glob patterns to match files
+        file_patterns: List of glob patterns to match files (default: ["*.txt", "*.py", "*.md"])
         recursive: Whether to search subdirectories
         encoding_name: The name of the encoding to use
         use_streaming: Whether to use streaming for large files
@@ -132,6 +132,8 @@ def count_tokens_in_directory(
     Returns:
         Dict mapping filenames to token counts
     """
+    if file_patterns is None:
+        file_patterns = ["*.txt", "*.py", "*.md"]
     results = {}
     base_path = pathlib.Path(directory_path)
 
@@ -172,7 +174,7 @@ def count(
     file: str = None, 
     directory: str = None,
     encoding: str = "cl100k_base",
-    file_patterns: List[str] = ["*.txt", "*.py", "*.md"],
+    file_patterns: List[str] = None,
     recursive: bool = False,
     use_streaming: bool = False,
     chunk_size: int = 1024*1024,
@@ -188,7 +190,7 @@ def count(
         file: File path to count (optional)
         directory: Directory path to count (optional)
         encoding: Encoding to use
-        file_patterns: List of glob patterns when using directory mode
+        file_patterns: List of glob patterns when using directory mode (default: ["*.txt", "*.py", "*.md"])
         recursive: Whether to search subdirectories
         use_streaming: Whether to use streaming for large files
         chunk_size: Size of chunks to read in bytes (for streaming)
@@ -200,6 +202,8 @@ def count(
     Returns:
         Token count or dictionary of counts for directory mode
     """
+    if file_patterns is None:
+        file_patterns = ["*.txt", "*.py", "*.md"]
     result = None
     
     if text is not None:
