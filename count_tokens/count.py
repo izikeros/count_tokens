@@ -56,8 +56,30 @@ def count_tokens_in_file(
     return count_tokens_in_string(text, encoding_name)
 
 
+def _read_chunk_to_boundary(file, chunk_size: int) -> str:
+    """Read a chunk from file, extending to the next newline to avoid splitting tokens.
+
+    Args:
+        file: Open file object
+        chunk_size: Approximate size of chunk to read in bytes
+
+    Returns:
+        Text chunk ending at a newline boundary (or EOF)
+    """
+    chunk = file.read(chunk_size)
+    if not chunk:
+        return ""
+
+    # If we're not at EOF, read until the next newline to avoid splitting tokens
+    if not chunk.endswith('\n'):
+        remainder = file.readline()
+        chunk += remainder
+
+    return chunk
+
+
 def count_tokens_in_large_file(
-    file_path: str, 
+    file_path: str,
     encoding_name: str = "cl100k_base",
     chunk_size: int = 1024*1024,  # 1MB chunks
     approximate: str = None,
@@ -65,7 +87,10 @@ def count_tokens_in_large_file(
     characters_per_token: float = CHARACTERS_PER_TOKEN,
 ) -> int:
     """Count tokens in a large file by streaming in chunks.
-    
+
+    Reads chunks aligned to newline boundaries to avoid splitting tokens
+    at arbitrary positions, which would cause inaccurate token counts.
+
     Args:
         file_path: Path to the file
         encoding_name: Encoding to use
@@ -73,7 +98,7 @@ def count_tokens_in_large_file(
         approximate: Approximate the number of tokens without tokenizing. Base on: w - words, c - characters
         tokens_per_word: The number of tokens per word for word-based approximation. Default: 4/3
         characters_per_token: The number of characters per token for character-based approximation. Default: 4
-        
+
     Returns:
         Total token count
     """
@@ -82,26 +107,26 @@ def count_tokens_in_large_file(
         return count_tokens_in_file(
             file_path, encoding_name, approximate, tokens_per_word, characters_per_token
         )
-    
+
     encoding = tiktoken.get_encoding(encoding_name)
     total_tokens = 0
-    
+
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(file_path, encoding='utf-8') as file:
             while True:
-                chunk = file.read(chunk_size)
+                chunk = _read_chunk_to_boundary(file, chunk_size)
                 if not chunk:
                     break
                 total_tokens += len(encoding.encode(chunk))
     except UnicodeDecodeError:
         # Try with a different encoding if utf-8 fails
-        with open(file_path, 'r', encoding='latin-1') as file:
+        with open(file_path, encoding='latin-1') as file:
             while True:
-                chunk = file.read(chunk_size)
+                chunk = _read_chunk_to_boundary(file, chunk_size)
                 if not chunk:
                     break
                 total_tokens += len(encoding.encode(chunk))
-            
+
     return total_tokens
 
 
