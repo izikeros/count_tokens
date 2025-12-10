@@ -392,6 +392,23 @@ class TestFormatOutput:
         assert "/test/file1.txt,100" in lines
         assert "/test/file2.txt,200" in lines
 
+    def test_format_output_csv_with_special_characters(self):
+        """Test CSV formatting properly escapes file paths with special characters."""
+        data = {
+            "/test/file,with,commas.txt": 100,
+            '/test/file "with" quotes.txt': 200,
+            "/test/normal.txt": 300,
+        }
+
+        result = _format_output(data, "csv")
+        lines = result.strip().split("\n")
+
+        assert lines[0] == "file,tokens"
+        # Paths with commas or quotes should be properly escaped/quoted
+        assert '"/test/file,with,commas.txt",100' in lines
+        assert '"/test/file ""with"" quotes.txt",200' in lines
+        assert "/test/normal.txt,300" in lines
+
     def test_format_output_text_with_errors(self):
         """Test formatting text output with error messages."""
         data = {

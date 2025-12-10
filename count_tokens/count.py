@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import argparse
-import pathlib
-import os
-import json
 import csv
+import io
+import json
+import pathlib
 from typing import Dict, List, Union
 
 import tiktoken
@@ -264,11 +264,12 @@ def _format_output(results, output_format="text"):
         return json.dumps(results, indent=2)
     elif output_format == "csv":
         if isinstance(results, dict):
-            output = []
-            output.append("file,tokens")
+            output = io.StringIO(newline='')
+            writer = csv.writer(output, lineterminator='\n')
+            writer.writerow(["file", "tokens"])
             for file_path, count in results.items():
-                output.append(f"{file_path},{count}")
-            return "\n".join(output)
+                writer.writerow([file_path, count])
+            return output.getvalue().rstrip('\n')
         return f"tokens\n{results}"
     else:  # text format (default)
         if isinstance(results, dict):
