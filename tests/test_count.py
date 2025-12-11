@@ -290,6 +290,23 @@ class TestCountTokensInDirectory:
         # When recursive=True, it should use ** pattern for depth
         mock_glob.assert_called_once_with("**/*.txt")
 
+    @patch("pathlib.Path.glob")
+    @patch("count_tokens.count.count_tokens_in_file")
+    def test_count_tokens_in_directory_default_patterns(self, mock_count_file, mock_glob):
+        """Test that default file patterns (*.txt, *.py, *.md) are used when None."""
+        mock_glob.return_value = []
+        mock_count_file.return_value = 100
+
+        # Call without file_patterns (uses default None -> ["*.txt", "*.py", "*.md"])
+        count_tokens_in_directory("/test")
+
+        # Verify glob was called with all three default patterns
+        glob_calls = [call[0][0] for call in mock_glob.call_args_list]
+        assert "*.txt" in glob_calls
+        assert "*.py" in glob_calls
+        assert "*.md" in glob_calls
+        assert len(glob_calls) == 3
+
 
 class TestCountFunction:
     def test_count_text_mode(self):
@@ -329,6 +346,18 @@ class TestCountFunction:
 
         assert result == mock_results
         mock_count_dir.assert_called_once()
+
+    @patch("count_tokens.count.count_tokens_in_directory")
+    def test_count_directory_mode_default_patterns(self, mock_count_dir):
+        """Test that count() passes default file patterns when None."""
+        mock_count_dir.return_value = {}
+
+        # Call without file_patterns (uses default None -> ["*.txt", "*.py", "*.md"])
+        count(directory="/test")
+
+        # Verify count_tokens_in_directory was called with the default patterns
+        call_kwargs = mock_count_dir.call_args[1]
+        assert call_kwargs["file_patterns"] == ["*.txt", "*.py", "*.md"]
 
     def test_count_no_input_provided(self):
         """Test the count function with no input provided."""
