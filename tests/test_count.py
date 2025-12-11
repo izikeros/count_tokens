@@ -129,16 +129,17 @@ class TestCountTokensInFile:
 
 
 class TestCountTokensInLargeFile:
-    @patch("builtins.open")
+    @patch("count_tokens.count.open")
     def test_count_tokens_large_file_default(self, mock_open_func):
         """Test counting tokens in a large file with default settings."""
-        # Mock file with two chunks
+        # Mock file with two chunks ending with newlines
         mock_file = MagicMock()
         mock_file.__enter__.return_value.read.side_effect = [
-            "This is chunk one",
-            "This is chunk two",
+            "This is chunk one\n",
+            "This is chunk two\n",
             "",
         ]
+        mock_file.__enter__.return_value.readline.return_value = ""
         mock_open_func.return_value = mock_file
 
         token_count = count_tokens_in_large_file("large_file.txt")
@@ -149,11 +150,12 @@ class TestCountTokensInLargeFile:
             mock_file.__enter__.return_value.read.call_count == 3
         )  # Initial two chunks + EOF check
 
-    @patch("builtins.open")
+    @patch("count_tokens.count.open")
     def test_count_tokens_large_file_with_custom_chunk_size(self, mock_open_func):
         """Test counting tokens with custom chunk size."""
         mock_file = MagicMock()
-        mock_file.__enter__.return_value.read.side_effect = ["Small chunk", ""]
+        mock_file.__enter__.return_value.read.side_effect = ["Small chunk\n", ""]
+        mock_file.__enter__.return_value.readline.return_value = ""
         mock_open_func.return_value = mock_file
 
         token_count = count_tokens_in_large_file("large_file.txt", chunk_size=100)
@@ -161,6 +163,26 @@ class TestCountTokensInLargeFile:
         assert isinstance(token_count, int)
         assert token_count > 0
         mock_file.__enter__.return_value.read.assert_called_with(100)
+
+    @patch("count_tokens.count.open")
+    def test_count_tokens_large_file_reads_to_newline_boundary(self, mock_open_func):
+        """Test that chunks are extended to newline boundaries to avoid splitting tokens."""
+        mock_file = MagicMock()
+        # Simulate a chunk that doesn't end with newline
+        mock_file.__enter__.return_value.read.side_effect = [
+            "This is a partial li",  # chunk doesn't end with newline
+            "",
+        ]
+        # readline should be called to complete to the newline
+        mock_file.__enter__.return_value.readline.return_value = "ne of text\n"
+        mock_open_func.return_value = mock_file
+
+        token_count = count_tokens_in_large_file("large_file.txt")
+
+        assert isinstance(token_count, int)
+        assert token_count > 0
+        # readline should have been called to extend to newline boundary
+        mock_file.__enter__.return_value.readline.assert_called()
 
     @patch("count_tokens.count.count_tokens_in_file")
     def test_count_tokens_large_file_with_approximation(self, mock_count_file):
@@ -175,7 +197,7 @@ class TestCountTokensInLargeFile:
             "large_file.txt", "cl100k_base", "w", TOKENS_PER_WORD, CHARACTERS_PER_TOKEN
         )
 
-    @patch("builtins.open")
+    @patch("count_tokens.count.open")
     def test_count_tokens_large_file_unicode_error_fallback(self, mock_open_func):
         """Test fallback to latin-1 encoding when utf-8 fails."""
         # First attempt with utf-8 fails, second with latin-1 succeeds
@@ -186,9 +208,10 @@ class TestCountTokensInLargeFile:
 
         mock_latin_file = MagicMock()
         mock_latin_file.__enter__.return_value.read.side_effect = [
-            "Latin encoded text",
+            "Latin encoded text\n",
             "",
         ]
+        mock_latin_file.__enter__.return_value.readline.return_value = ""
 
         mock_open_func.side_effect = [mock_utf8_file, mock_latin_file]
 
@@ -197,7 +220,7 @@ class TestCountTokensInLargeFile:
         assert isinstance(token_count, int)
         assert token_count > 0
         # Check that we tried with both encodings
-        mock_open_func.assert_called_with("binary_file.bin", "r", encoding="latin-1")
+        mock_open_func.assert_called_with("binary_file.bin", encoding="latin-1")
 
 
 class TestCountTokensInDirectory:
