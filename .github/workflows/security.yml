@@ -1,0 +1,29 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Every Sunday at midnight
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+      - name: Export requirements
+        run: |
+          poetry export -f requirements.txt --output requirements.txt --without-hashes
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Run security scan
+        run: pip-audit -r requirements.txt

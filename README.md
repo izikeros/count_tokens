@@ -47,7 +47,7 @@ pipx install count-tokens
 or run it with [uv](https://github.com/astral-sh/uv) without installing:
 
 ```sh
-uvx run count-tokens document.txt
+uvx count-tokens document.txt
 ```
 
 or install it in your current environment with pip.
@@ -110,6 +110,8 @@ Process all files in a directory matching specific patterns:
 ```sh
 count-tokens -d ./docs -p "*.md,*.txt"
 ```
+
+If `-p` is not specified, the default patterns are `*.txt,*.py,*.md`.
 
 Process directories recursively:
 
