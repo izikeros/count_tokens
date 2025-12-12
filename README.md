@@ -4,6 +4,7 @@
 ![](https://img.shields.io/pypi/pyversions/count-tokens.svg)
 ![](https://img.shields.io/pypi/dm/count-tokens.svg)
 <a href="https://codeclimate.com/github/izikeros/count_tokens/maintainability"><img src="https://api.codeclimate.com/v1/badges/37fd0435fff274b6c9b5/maintainability" /></a>
+[![codecov](https://codecov.io/gh/izikeros/count_tokens/branch/main/graph/badge.svg)](https://codecov.io/gh/izikeros/count_tokens)
 
 A versatile tool for counting tokens in text files, directories, and strings with support for streaming large files, batching, and more.
 

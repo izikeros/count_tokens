@@ -1,18 +1,18 @@
-import pytest
 import json
-import os
-from unittest.mock import mock_open, patch, MagicMock
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from count_tokens.count import (
-    count_tokens_in_string,
+    CHARACTERS_PER_TOKEN,
+    TOKENS_PER_WORD,
+    _format_output,
+    count,
+    count_tokens_in_directory,
     count_tokens_in_file,
     count_tokens_in_large_file,
-    count_tokens_in_directory,
-    count,
-    _format_output,
-    TOKENS_PER_WORD,
-    CHARACTERS_PER_TOKEN,
+    count_tokens_in_string,
 )
 
 
