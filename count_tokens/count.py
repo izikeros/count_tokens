@@ -4,7 +4,8 @@ import csv
 import io
 import json
 import pathlib
-from typing import Dict, List, Union
+from _csv import Writer
+from argparse import Namespace
 
 import tiktoken
 
@@ -30,7 +31,7 @@ def count_tokens_in_string(string: str, encoding_name: str = "cl100k_base") -> i
 def count_tokens_in_file(
     file_path: str,
     encoding_name: str = "cl100k_base",
-    approximate: str = None,
+    approximate: str | None = None,
     tokens_per_word: float = TOKENS_PER_WORD,
     characters_per_token: float = CHARACTERS_PER_TOKEN,
 ) -> int:
@@ -71,7 +72,7 @@ def _read_chunk_to_boundary(file, chunk_size: int) -> str:
         return ""
 
     # If we're not at EOF, read until the next newline to avoid splitting tokens
-    if not chunk.endswith('\n'):
+    if not chunk.endswith("\n"):
         remainder = file.readline()
         chunk += remainder
 
@@ -81,8 +82,8 @@ def _read_chunk_to_boundary(file, chunk_size: int) -> str:
 def count_tokens_in_large_file(
     file_path: str,
     encoding_name: str = "cl100k_base",
-    chunk_size: int = 1024*1024,  # 1MB chunks
-    approximate: str = None,
+    chunk_size: int = 1024 * 1024,  # 1MB chunks
+    approximate: str | None = None,
     tokens_per_word: float = TOKENS_PER_WORD,
     characters_per_token: float = CHARACTERS_PER_TOKEN,
 ) -> int:
@@ -112,7 +113,7 @@ def count_tokens_in_large_file(
     total_tokens = 0
 
     try:
-        with open(file_path, encoding='utf-8') as file:
+        with open(file_path, encoding="utf-8") as file:
             while True:
                 chunk = _read_chunk_to_boundary(file, chunk_size)
                 if not chunk:
@@ -120,7 +121,7 @@ def count_tokens_in_large_file(
                 total_tokens += len(encoding.encode(chunk))
     except UnicodeDecodeError:
         # Try with a different encoding if utf-8 fails
-        with open(file_path, encoding='latin-1') as file:
+        with open(file_path, encoding="latin-1") as file:
             while True:
                 chunk = _read_chunk_to_boundary(file, chunk_size)
                 if not chunk:
@@ -132,15 +133,15 @@ def count_tokens_in_large_file(
 
 def count_tokens_in_directory(
     directory_path: str,
-    file_patterns: List[str] = None,
+    file_patterns: list[str] | None = None,
     recursive: bool = False,
     encoding_name: str = "cl100k_base",
     use_streaming: bool = False,
-    chunk_size: int = 1024*1024,
-    approximate: str = None,
+    chunk_size: int = 1024 * 1024,
+    approximate: str | None = None,
     tokens_per_word: float = TOKENS_PER_WORD,
     characters_per_token: float = CHARACTERS_PER_TOKEN,
-) -> Dict[str, Union[int, str]]:
+) -> dict[str, int | str]:
     """Count tokens in multiple files matching patterns in a directory.
 
     Args:
@@ -159,14 +160,11 @@ def count_tokens_in_directory(
     """
     if file_patterns is None:
         file_patterns = ["*.txt", "*.py", "*.md"]
-    results = {}
+    results: dict[str, int | str] = {}
     base_path = pathlib.Path(directory_path)
 
     for pattern in file_patterns:
-        if recursive:
-            glob_pattern = f"**/{pattern}"
-        else:
-            glob_pattern = pattern
+        glob_pattern: str = f"**/{pattern}" if recursive else pattern
 
         for file_path in base_path.glob(glob_pattern):
             try:
@@ -188,28 +186,28 @@ def count_tokens_in_directory(
                         characters_per_token=characters_per_token,
                     )
             except Exception as e:
-                results[str(file_path)] = f"Error: {str(e)}"
+                results[str(file_path)] = f"Error: {e!s}"
 
     return results
 
 
 # Simple API for common use cases
 def count(
-    text: str = None, 
-    file: str = None, 
-    directory: str = None,
+    text: str | None = None,
+    file: str | None = None,
+    directory: str | None = None,
     encoding: str = "cl100k_base",
-    file_patterns: List[str] = None,
+    file_patterns: list[str] | None = None,
     recursive: bool = False,
     use_streaming: bool = False,
-    chunk_size: int = 1024*1024,
-    approximate: str = None,
+    chunk_size: int = 1024 * 1024,
+    approximate: str | None = None,
     tokens_per_word: float = TOKENS_PER_WORD,
     characters_per_token: float = CHARACTERS_PER_TOKEN,
-    max_tokens: int = None,
+    max_tokens: int | None = None,
 ):
     """Count tokens with a simplified API.
-    
+
     Args:
         text: Text string to count (optional)
         file: File path to count (optional)
@@ -223,20 +221,20 @@ def count(
         tokens_per_word: The number of tokens per word for approximation
         characters_per_token: The number of characters per token for approximation
         max_tokens: Optional maximum token limit to check against
-        
+
     Returns:
         Token count or dictionary of counts for directory mode
     """
     if file_patterns is None:
-        file_patterns = ["*.txt", "*.py", "*.md"]
+        file_patterns: list[str] = ["*.txt", "*.py", "*.md"]
     result = None
-    
+
     if text is not None:
-        result = count_tokens_in_string(text, encoding)
+        result: int = count_tokens_in_string(text, encoding)
     elif file is not None:
         if use_streaming:
             result = count_tokens_in_large_file(
-                file, 
+                file,
                 encoding_name=encoding,
                 chunk_size=chunk_size,
                 approximate=approximate,
@@ -245,7 +243,7 @@ def count(
             )
         else:
             result = count_tokens_in_file(
-                file, 
+                file,
                 encoding_name=encoding,
                 approximate=approximate,
                 tokens_per_word=tokens_per_word,
@@ -253,9 +251,9 @@ def count(
             )
     elif directory is not None:
         result = count_tokens_in_directory(
-            directory, 
-            file_patterns=file_patterns, 
-            recursive=recursive, 
+            directory,
+            file_patterns=file_patterns,
+            recursive=recursive,
             encoding_name=encoding,
             use_streaming=use_streaming,
             chunk_size=chunk_size,
@@ -265,7 +263,7 @@ def count(
         )
     else:
         raise ValueError("Either text, file, or directory must be provided")
-    
+
     # Check if result exceeds max_tokens if specified
     if max_tokens is not None:
         if isinstance(result, int) and result > max_tokens:
@@ -274,8 +272,12 @@ def count(
             # Add limit_exceeded flag to each file that exceeds the limit
             for file_path, count in list(result.items()):
                 if isinstance(count, int) and count > max_tokens:
-                    result[file_path] = {"tokens": count, "limit_exceeded": True, "max_tokens": max_tokens}
-    
+                    result[file_path] = {
+                        "tokens": count,
+                        "limit_exceeded": True,
+                        "max_tokens": max_tokens,
+                    }
+
     return result
 
 
@@ -293,16 +295,16 @@ def _format_output(results, output_format="text"):
         return json.dumps(results, indent=2)
     elif output_format == "csv":
         if isinstance(results, dict):
-            output = io.StringIO(newline='')
-            writer = csv.writer(output, lineterminator='\n')
+            output = io.StringIO(newline="")
+            writer: Writer = csv.writer(output, lineterminator="\n")
             writer.writerow(["file", "tokens"])
             for file_path, count in results.items():
                 writer.writerow([file_path, count])
-            return output.getvalue().rstrip('\n')
+            return output.getvalue().rstrip("\n")
         return f"tokens\n{results}"
     else:  # text format (default)
         if isinstance(results, dict):
-            output = []
+            output: list[str] = []
             total = 0
             for file_path, count in results.items():
                 if isinstance(count, int):
@@ -310,12 +312,14 @@ def _format_output(results, output_format="text"):
                     total += count
                 else:
                     output.append(f"{file_path}: {count}")
-            output.append(f"\nTotal: {total} tokens across {len([c for c in results.values() if isinstance(c, int)])} files")
+            output.append(
+                f"\nTotal: {total} tokens across {len([c for c in results.values() if isinstance(c, int)])} files"
+            )
             return "\n".join(output)
         return str(results)
 
 
-def main():
+def main() -> None:
     """Run the command line interface.
 
     Returns:
@@ -344,19 +348,42 @@ def main():
     )
 
     # Directory processing options
-    parser.add_argument("-d", "--directory", help="Process all matching files in directory")
-    parser.add_argument("-r", "--recursive", action="store_true", help="Process directories recursively")
-    parser.add_argument("-p", "--pattern", default="*.txt", help="File pattern when using directory mode (comma-separated)")
+    parser.add_argument(
+        "-d", "--directory", help="Process all matching files in directory"
+    )
+    parser.add_argument(
+        "-r", "--recursive", action="store_true", help="Process directories recursively"
+    )
+    parser.add_argument(
+        "-p",
+        "--pattern",
+        default="*.txt",
+        help="File pattern when using directory mode (comma-separated)",
+    )
 
     # Output format options
-    parser.add_argument("--format", choices=["text", "json", "csv"], default="text", help="Output format")
-    
+    parser.add_argument(
+        "--format",
+        choices=["text", "json", "csv"],
+        default="text",
+        help="Output format",
+    )
+
     # Large file handling
-    parser.add_argument("--stream", action="store_true", help="Use streaming mode for large files")
-    parser.add_argument("--chunk-size", type=int, default=1024*1024, help="Chunk size for streaming mode (bytes)")
-    
+    parser.add_argument(
+        "--stream", action="store_true", help="Use streaming mode for large files"
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=1024 * 1024,
+        help="Chunk size for streaming mode (bytes)",
+    )
+
     # Token limit checking
-    parser.add_argument("--max-tokens", type=int, help="Check if tokens exceed this limit")
+    parser.add_argument(
+        "--max-tokens", type=int, help="Check if tokens exceed this limit"
+    )
 
     # Approximation options
     parser.add_argument(
@@ -372,7 +399,7 @@ def main():
         help=f"Number of characters per token for character-based approximation (default: {CHARACTERS_PER_TOKEN})",
     )
 
-    args = parser.parse_args()
+    args: Namespace = parser.parse_args()
 
     # Common parameters
     encoding_name = args.encoding
@@ -404,7 +431,7 @@ def main():
     elif args.file:
         file_path = args.file
         if use_streaming:
-            num_tokens = count_tokens_in_large_file(
+            num_tokens: int = count_tokens_in_large_file(
                 file_path=file_path,
                 encoding_name=encoding_name,
                 chunk_size=chunk_size,
@@ -425,14 +452,16 @@ def main():
             print(f"File: {file_path}")
             print(f"Encoding: {encoding_name}")
             if approximate == "w":
-                print(f"Approximation method: Words (tokens per word: {tokens_per_word})")
+                print(
+                    f"Approximation method: Words (tokens per word: {tokens_per_word})"
+                )
             elif approximate == "c":
                 print(
                     f"Approximation method: Characters (characters per token: {characters_per_token})"
                 )
             print(f"Number of tokens: {num_tokens}")
             return
-        results = num_tokens
+        results: int = num_tokens
     else:
         parser.print_help()
         return
@@ -440,7 +469,7 @@ def main():
     # Print results according to format
     if args.quiet:
         if isinstance(results, dict):
-            total = sum(count for count in results.values() if isinstance(count, int))
+            total: int = sum(count for count in results.values() if isinstance(count, int))
             print(total)
         else:
             print(results)
