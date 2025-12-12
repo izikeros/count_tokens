@@ -13,6 +13,7 @@ from count_tokens.count import (
     count_tokens_in_file,
     count_tokens_in_large_file,
     count_tokens_in_string,
+    main,
 )
 
 
@@ -473,3 +474,42 @@ class TestFormatOutput:
         assert "file1.txt: 100 tokens" in result
         assert "error.txt: Error: Could not process file" in result
         assert "Total: 100 tokens across 1 files" in result
+
+
+class TestStdinInput:
+    @patch("sys.stdin.isatty", return_value=False)
+    @patch("sys.stdin.read", return_value="Hello world")
+    @patch("sys.argv", ["count-tokens"])
+    def test_stdin_basic(self, mock_read, mock_isatty, capsys):
+        """Test basic stdin input."""
+        main()
+        captured = capsys.readouterr()
+        assert "Source: stdin" in captured.out
+        assert "Number of tokens:" in captured.out
+
+    @patch("sys.stdin.isatty", return_value=False)
+    @patch("sys.stdin.read", return_value="Hello world")
+    @patch("sys.argv", ["count-tokens", "-q"])
+    def test_stdin_quiet_mode(self, mock_read, mock_isatty, capsys):
+        """Test stdin input with quiet mode."""
+        main()
+        captured = capsys.readouterr()
+        assert captured.out.strip().isdigit()
+
+    @patch("sys.stdin.isatty", return_value=False)
+    @patch("sys.stdin.read", return_value="Hello world")
+    @patch("sys.argv", ["count-tokens", "--format", "json"])
+    def test_stdin_json_format(self, mock_read, mock_isatty, capsys):
+        """Test stdin input with JSON format."""
+        main()
+        captured = capsys.readouterr()
+        assert captured.out.strip().isdigit()
+
+    @patch("sys.stdin.isatty", return_value=False)
+    @patch("sys.stdin.read", return_value="")
+    @patch("sys.argv", ["count-tokens"])
+    def test_stdin_empty_input(self, mock_read, mock_isatty, capsys):
+        """Test stdin with empty input."""
+        main()
+        captured = capsys.readouterr()
+        assert "Number of tokens: 0" in captured.out

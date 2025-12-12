@@ -4,6 +4,7 @@ import csv
 import io
 import json
 import pathlib
+import sys
 from _csv import Writer
 from argparse import Namespace
 
@@ -462,6 +463,17 @@ def main() -> None:
             print(f"Number of tokens: {num_tokens}")
             return
         results: int = num_tokens
+    # Stdin mode
+    elif not sys.stdin.isatty():
+        text = sys.stdin.read()
+        num_tokens = count_tokens_in_string(text, encoding_name)
+
+        if not args.quiet and output_format == "text":
+            print("Source: stdin")
+            print(f"Encoding: {encoding_name}")
+            print(f"Number of tokens: {num_tokens}")
+            return
+        results = num_tokens
     else:
         parser.print_help()
         return
