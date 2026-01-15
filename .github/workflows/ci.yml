@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["*"]
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -13,70 +13,39 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: pyproject.toml
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+        run: uv python install ${{ matrix.python-version }}
+
       - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run linting
         run: |
-          poetry install --with test
-      - name: Run tests with coverage
-        run: |
-          poetry run pytest --cov=count_tokens --cov-report=xml
+          uv run ruff check src/ tests/
+          uv run ruff format --check src/ tests/
+
+      - name: Run type checking
+        run: uv run ty check src/
+
+      - name: Run security checks
+        run: uv run bandit -r src/
+
+      - name: Run tests
+        run: uv run pytest --cov --cov-report=xml
+
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.12'
         with:
-          files: coverage.xml
+          files: ./coverage.xml
           fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install ruff
-        run: pip install ruff
-      - name: Run ruff check
-        run: ruff check .
-
-  format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install ruff
-        run: pip install ruff
-      - name: Check formatting
-        run: ruff format --check .
-
-  typecheck:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install ty
-        run: pip install ty
-      - name: Run type check
-        run: ty check

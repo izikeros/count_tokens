@@ -1,17 +1,16 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
 name = "count-tokens"
 version = "0.7.3"
-description = "Count number of tokens in the text file using tiktoken tokenizer from OpenAI."
-authors = ["Krystian Safjan <ksafjan@gmail.com>"]
-license = "MIT"
+description = "Count number of tokens in text files using tiktoken tokenizer from OpenAI"
 readme = "README.md"
-packages = [{include = "count_tokens"}]
-
-keywords = ["count", "tokens", "tiktoken", "openai", "tokenizer"]
-homepage = "https://github.com/izikeros/count_tokens"
-repository = "https://github.com/izikeros/count_tokens"
-documentation = "https://github.com/izikeros/count_tokens"
-
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+authors = [{name = "Krystian Safjan", email = "ksafjan@gmail.com"}]
+keywords = ["count", "tokens", "tiktoken", "openai", "tokenizer", "llm", "gpt"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
@@ -19,26 +18,103 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Utilities",
+    "Typing :: Typed",
+]
+dependencies = [
+    "tiktoken>=0.9.0",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-tiktoken = "^0.9.0"
+[project.scripts]
+count-tokens = "count_tokens.count:main"
 
-[tool.poetry.scripts]
-count-tokens = 'count_tokens.count:main'
+[project.urls]
+Homepage = "https://github.com/izikeros/count_tokens"
+Documentation = "https://izikeros.github.io/count_tokens"
+Repository = "https://github.com/izikeros/count_tokens"
+"Bug Tracker" = "https://github.com/izikeros/count_tokens/issues"
+Changelog = "https://github.com/izikeros/count_tokens/blob/main/CHANGELOG.md"
 
-[tool.poetry.group.test.dependencies]
-pytest = "^8.3.5"
-pytest-cov = "^6.0.0"
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.9.0",
+    "ty>=0.0.1a23",
+    "pre-commit>=3.0.0",
+    "bandit[toml]>=1.7.5",
+    "safety>=3.0.0",
+    "build>=1.0.0",
+    "twine>=5.0.0",
+    "bump-my-version>=0.28.0",
+    "git-cliff>=2.0.0",
+]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.24.0",
+]
 
-[tool.poetry.group.dev.dependencies]
-pre-commit = "^4.2.0"
-pytest = "^8.3.5"
+[tool.hatch.build.targets.wheel]
+packages = ["src/count_tokens"]
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+]
+
+[tool.bumpversion]
+current_version = "0.7.3"
+commit = true
+tag = true
+tag_name = "v{new_version}"
+message = "chore(release): bump version {current_version} → {new_version}"
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "src/count_tokens/__init__.py"
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "--cov=src/count_tokens",
+    "--cov-branch",
+    "--cov-report=term-missing",
+]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+show_missing = true
+precision = 2

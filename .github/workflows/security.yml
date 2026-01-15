@@ -1,29 +1,46 @@
 name: Security Scan
 
 on:
+  pull_request:
   schedule:
     - cron: '0 0 * * 0'  # Every Sunday at midnight
   workflow_dispatch:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   security:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run bandit security scan
+        run: uv run bandit -r src/ -f json -o bandit-report.json
+        continue-on-error: true
+
+      - name: Run safety check
+        run: uv run safety check
+        continue-on-error: true
+
+      - name: Run pip-audit
+        run: |
+          uv pip install pip-audit
+          uv run pip-audit
+        continue-on-error: true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
-          python-version: "3.12"
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-      - name: Export requirements
-        run: |
-          poetry export -f requirements.txt --output requirements.txt --without-hashes
-      - name: Install pip-audit
-        run: pip install pip-audit
-      - name: Run security scan
-        run: pip-audit -r requirements.txt
+          name: security-reports
+          path: |
+            bandit-report.json

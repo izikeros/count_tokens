@@ -1,3 +1,0 @@
-[bandit]
-targets: ./count_tokens, ./tests
-skips: B101
