@@ -29,6 +29,10 @@ All notable changes to this project will be documented in this file.
 - Add pytest-cov dependency for test coverage
 - Add GitHub Actions CI configuration for testing, linting, and formatting
 - Add GitHub Actions workflow for security scanning
+- Bump version to 0.7.3 in pyproject.toml
+- Update workflows with setup-python, enable-cache, pip-audit
+- Update gitignore and ruff config
+- Stop tracking .coverage file
 
 ## [0.7.1] - 2025-01-09
 
