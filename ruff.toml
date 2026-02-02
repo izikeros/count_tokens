@@ -43,6 +43,7 @@ max-complexity = 10
 [lint.per-file-ignores]
 "**/tests/*" = ["D100", "D101", "D102", "D103", "E501"]
 "**/*.ipynb" = ["D100", "D101", "D102", "D103", "E501"]
+"src/count_tokens/count.py" = ["C901"]  # Complex function pre-existing
 
 [lint.isort]
 known-first-party = ["count_tokens"]
