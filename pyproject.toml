@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "count-tokens"
-version = "0.8.0-alpha0"
+version = "0.8.0"
 description = "Count number of tokens in text files using tiktoken tokenizer from OpenAI"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -73,26 +73,12 @@ include = [
 ]
 
 [tool.bumpversion]
-current_version = "0.8.0-alpha0"
-parse = """(?x)
-    (?P<major>0|[1-9]\\d*)\\.
-    (?P<minor>0|[1-9]\\d*)\\.
-    (?P<patch>0|[1-9]\\d*)
-    (?:-(?P<pre_l>alpha|beta|rc)(?P<pre_n>0|[1-9]\\d*))?
-"""
-serialize = [
-    "{major}.{minor}.{patch}-{pre_l}{pre_n}",
-    "{major}.{minor}.{patch}",
-]
+current_version = "0.8.0"
 tag = false
 commit = false
 tag_name = "v{new_version}"
 message = "chore(release): bump version {current_version} → {new_version}"
 allow_dirty = false
-
-[tool.bumpversion.parts.pre_l]
-values = ["alpha", "beta", "rc", "final"]
-optional_value = "final"
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"
@@ -106,7 +92,7 @@ replace = '__version__ = "{new_version}"'
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.8.0-alpha0"
+version = "0.8.0"
 tag_format = "v$version"
 allowed_prefixes = ["Merge", "Revert", "Initial"]
 
