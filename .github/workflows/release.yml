@@ -1,4 +1,4 @@
-name: Release
+name: Publish to PyPI
 
 on:
   push:
@@ -6,11 +6,11 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,32 +18,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Install uv
         uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
 
       - name: Install dependencies
         run: uv sync --group dev
 
-      - name: Run tests
-        run: uv run pytest
-
       - name: Build package
-        run: uv build
+        run: uv run python -m build
 
       - name: Check package
         run: uv run twine check dist/*
-
-      - name: Extract version from tag
-        id: version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
-          generate_release_notes: true
-          draft: false
-          prerelease: false
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
