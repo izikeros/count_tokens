@@ -86,9 +86,11 @@ publish-test: build
 	uv run twine upload --repository testpypi dist/*
 
 docs:
+	uv sync --group docs
 	uv run mkdocs build
 
 serve-docs:
+	uv sync --group docs
 	uv run mkdocs serve
 
 changelog:
