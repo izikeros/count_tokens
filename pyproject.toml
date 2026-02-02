@@ -48,11 +48,12 @@ dev = [
     "ty>=0.0.1a23",
     "pre-commit>=3.0.0",
     "bandit[toml]>=1.7.5",
-    "safety>=3.0.0",
+    "pip-audit>=2.6.0",
     "build>=1.0.0",
     "twine>=5.0.0",
     "bump-my-version>=0.28.0",
     "git-cliff>=2.0.0",
+    "commitizen>=4.1.0",
 ]
 docs = [
     "mkdocs>=1.6.0",
@@ -73,10 +74,25 @@ include = [
 
 [tool.bumpversion]
 current_version = "0.7.3"
-commit = true
-tag = true
+parse = """(?x)
+    (?P<major>0|[1-9]\\d*)\\.
+    (?P<minor>0|[1-9]\\d*)\\.
+    (?P<patch>0|[1-9]\\d*)
+    (?:-(?P<pre_l>alpha|beta|rc)(?P<pre_n>0|[1-9]\\d*))?
+"""
+serialize = [
+    "{major}.{minor}.{patch}-{pre_l}{pre_n}",
+    "{major}.{minor}.{patch}",
+]
+tag = false
+commit = false
 tag_name = "v{new_version}"
 message = "chore(release): bump version {current_version} → {new_version}"
+allow_dirty = false
+
+[tool.bumpversion.parts.pre_l]
+values = ["alpha", "beta", "rc", "final"]
+optional_value = "final"
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"
@@ -87,6 +103,12 @@ replace = 'version = "{new_version}"'
 filename = "src/count_tokens/__init__.py"
 search = '__version__ = "{current_version}"'
 replace = '__version__ = "{new_version}"'
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.7.3"
+tag_format = "v$version"
+allowed_prefixes = ["Merge", "Revert", "Initial"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
