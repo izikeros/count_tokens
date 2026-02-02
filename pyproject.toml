@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "count-tokens"
-version = "0.8.0"
+version = "0.8.1"
 description = "Count number of tokens in text files using tiktoken tokenizer from OpenAI"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -73,7 +73,7 @@ include = [
 ]
 
 [tool.bumpversion]
-current_version = "0.8.0"
+current_version = "0.8.1"
 tag = false
 commit = false
 tag_name = "v{new_version}"
@@ -92,7 +92,7 @@ replace = '__version__ = "{new_version}"'
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.8.0"
+version = "0.8.1"
 tag_format = "v$version"
 allowed_prefixes = ["Merge", "Revert", "Initial"]
 

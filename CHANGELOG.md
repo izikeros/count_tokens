@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- Correct bumpversion config to use standard versions
+
+### ⚙️ Miscellaneous Tasks
+
+- Update uv.lock
+
+## [0.8.0-alpha0] - 2026-02-02
+
 ### 🚀 Features
 
 - Add support for directory processing and large file streaming
@@ -33,6 +43,7 @@ All notable changes to this project will be documented in this file.
 - Update workflows with setup-python, enable-cache, pip-audit
 - Update gitignore and ruff config
 - Stop tracking .coverage file
+- *(release)* Bump version to 0.8.0-alpha0
 
 ## [0.7.1] - 2025-01-09
 
