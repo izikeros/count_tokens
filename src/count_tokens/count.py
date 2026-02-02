@@ -469,7 +469,9 @@ def main() -> None:
     # Print results according to format
     if args.quiet:
         if isinstance(results, dict):
-            total: int = sum(count for count in results.values() if isinstance(count, int))
+            total: int = sum(
+                count for count in results.values() if isinstance(count, int)
+            )
             print(total)
         else:
             print(results)

@@ -292,7 +292,9 @@ class TestCountTokensInDirectory:
 
     @patch("pathlib.Path.glob")
     @patch("count_tokens.count.count_tokens_in_file")
-    def test_count_tokens_in_directory_default_patterns(self, mock_count_file, mock_glob):
+    def test_count_tokens_in_directory_default_patterns(
+        self, mock_count_file, mock_glob
+    ):
         """Test that default file patterns (*.txt, *.py, *.md) are used when None."""
         mock_glob.return_value = []
         mock_count_file.return_value = 100
