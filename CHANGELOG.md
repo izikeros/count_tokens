@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [0.8.1] - 2026-02-02
 
 ### 🐛 Bug Fixes
 
@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - Update uv.lock
+- *(release)* Bump version to 0.8.1
 
 ## [0.8.0-alpha0] - 2026-02-02
 
