@@ -6,6 +6,7 @@ import json
 import pathlib
 from _csv import Writer
 from argparse import Namespace
+from dataclasses import dataclass, fields
 
 import tiktoken
 
@@ -13,8 +14,71 @@ import tiktoken
 TOKENS_PER_WORD = 4.0 / 3.0
 CHARACTERS_PER_TOKEN = 4.0
 
+# Default configuration values
+DEFAULT_ENCODING = "cl100k_base"
+TXT_PATTERN = "*.txt"
+DEFAULT_FILE_PATTERNS = [TXT_PATTERN, "*.py", "*.md"]
+DEFAULT_CHUNK_SIZE = 1024 * 1024  # 1MB chunks
 
-def count_tokens_in_string(string: str, encoding_name: str = "cl100k_base") -> int:
+
+@dataclass
+class TokenCountOptions:
+    """Options controlling how tokens are counted.
+
+    Bundles the common counting parameters so functions don't need long
+    parameter lists. Legacy keyword arguments are still accepted by the
+    counting functions and merged into an instance of this class.
+
+    Attributes:
+        encoding_name: The name of the tiktoken encoding to use.
+        approximate: Approximation mode: "w" (words), "c" (characters), or None.
+        tokens_per_word: Tokens per word for word-based approximation.
+        characters_per_token: Characters per token for character-based approximation.
+        use_streaming: Whether to stream large files in chunks.
+        chunk_size: Size of chunks to read in bytes when streaming.
+    """
+
+    encoding_name: str = DEFAULT_ENCODING
+    approximate: str | None = None
+    tokens_per_word: float = TOKENS_PER_WORD
+    characters_per_token: float = CHARACTERS_PER_TOKEN
+    use_streaming: bool = False
+    chunk_size: int = DEFAULT_CHUNK_SIZE
+
+
+# Map legacy keyword-argument names to TokenCountOptions field names.
+_OPTION_ALIASES = {"encoding": "encoding_name"}
+
+
+def _merge_options(
+    options: TokenCountOptions | None, overrides: dict
+) -> TokenCountOptions:
+    """Return options updated with any legacy keyword overrides.
+
+    Args:
+        options: Base options, or None to start from defaults.
+        overrides: Legacy keyword arguments to apply on top of the base options.
+
+    Returns:
+        A TokenCountOptions instance reflecting the base options and overrides.
+
+    Raises:
+        TypeError: If an override is not a recognized option.
+    """
+    base = options if options is not None else TokenCountOptions()
+    if not overrides:
+        return base
+
+    values = {f.name: getattr(base, f.name) for f in fields(TokenCountOptions)}
+    for key, value in overrides.items():
+        name = _OPTION_ALIASES.get(key, key)
+        if name not in values:
+            raise TypeError(f"Unexpected keyword argument: {key!r}")
+        values[name] = value
+    return TokenCountOptions(**values)
+
+
+def count_tokens_in_string(string: str, encoding_name: str = DEFAULT_ENCODING) -> int:
     """Return the number of tokens in a text string.
 
     Args:
@@ -30,7 +94,7 @@ def count_tokens_in_string(string: str, encoding_name: str = "cl100k_base") -> i
 
 def count_tokens_in_file(
     file_path: str,
-    encoding_name: str = "cl100k_base",
+    encoding_name: str = DEFAULT_ENCODING,
     approximate: str | None = None,
     tokens_per_word: float = TOKENS_PER_WORD,
     characters_per_token: float = CHARACTERS_PER_TOKEN,
@@ -79,13 +143,40 @@ def _read_chunk_to_boundary(file, chunk_size: int) -> str:
     return chunk
 
 
+def _stream_file_tokens(file_path: str, encoding, chunk_size: int) -> int:
+    """Stream a file in newline-aligned chunks and count its tokens.
+
+    Falls back to latin-1 if the file is not valid UTF-8.
+
+    Args:
+        file_path: Path to the file.
+        encoding: A tiktoken encoding instance used to encode chunks.
+        chunk_size: Size of chunks to read in bytes.
+
+    Returns:
+        Total token count for the file.
+    """
+
+    def _count(file_encoding: str) -> int:
+        total = 0
+        with open(file_path, encoding=file_encoding) as file:
+            while True:
+                chunk = _read_chunk_to_boundary(file, chunk_size)
+                if not chunk:
+                    break
+                total += len(encoding.encode(chunk))
+        return total
+
+    try:
+        return _count("utf-8")
+    except UnicodeDecodeError:
+        return _count("latin-1")
+
+
 def count_tokens_in_large_file(
     file_path: str,
-    encoding_name: str = "cl100k_base",
-    chunk_size: int = 1024 * 1024,  # 1MB chunks
-    approximate: str | None = None,
-    tokens_per_word: float = TOKENS_PER_WORD,
-    characters_per_token: float = CHARACTERS_PER_TOKEN,
+    options: TokenCountOptions | None = None,
+    **kwargs,
 ) -> int:
     """Count tokens in a large file by streaming in chunks.
 
@@ -93,73 +184,74 @@ def count_tokens_in_large_file(
     at arbitrary positions, which would cause inaccurate token counts.
 
     Args:
-        file_path: Path to the file
-        encoding_name: Encoding to use
-        chunk_size: Size of chunks to read in bytes
-        approximate: Approximate the number of tokens without tokenizing. Base on: w - words, c - characters
-        tokens_per_word: The number of tokens per word for word-based approximation. Default: 4/3
-        characters_per_token: The number of characters per token for character-based approximation. Default: 4
+        file_path: Path to the file.
+        options: Counting options. When None, defaults are used.
+        **kwargs: Legacy keyword arguments (encoding_name, chunk_size, approximate,
+            tokens_per_word, characters_per_token, use_streaming) merged into options.
 
     Returns:
-        Total token count
+        Total token count.
     """
-    if approximate is not None:
+    opts = _merge_options(options, kwargs)
+
+    if opts.approximate is not None:
         # For approximation methods, we can just read the whole file and count
         return count_tokens_in_file(
-            file_path, encoding_name, approximate, tokens_per_word, characters_per_token
+            file_path,
+            opts.encoding_name,
+            opts.approximate,
+            opts.tokens_per_word,
+            opts.characters_per_token,
         )
 
-    encoding = tiktoken.get_encoding(encoding_name)
-    total_tokens = 0
+    encoding = tiktoken.get_encoding(opts.encoding_name)
+    return _stream_file_tokens(file_path, encoding, opts.chunk_size)
 
-    try:
-        with open(file_path, encoding="utf-8") as file:
-            while True:
-                chunk = _read_chunk_to_boundary(file, chunk_size)
-                if not chunk:
-                    break
-                total_tokens += len(encoding.encode(chunk))
-    except UnicodeDecodeError:
-        # Try with a different encoding if utf-8 fails
-        with open(file_path, encoding="latin-1") as file:
-            while True:
-                chunk = _read_chunk_to_boundary(file, chunk_size)
-                if not chunk:
-                    break
-                total_tokens += len(encoding.encode(chunk))
 
-    return total_tokens
+def _count_single_path(file_path: str, options: TokenCountOptions) -> int:
+    """Count tokens for one file using the configured options.
+
+    Args:
+        file_path: Path to the file.
+        options: Counting options.
+
+    Returns:
+        Token count for the file.
+    """
+    if options.use_streaming:
+        return count_tokens_in_large_file(file_path, options)
+    return count_tokens_in_file(
+        file_path,
+        options.encoding_name,
+        options.approximate,
+        options.tokens_per_word,
+        options.characters_per_token,
+    )
 
 
 def count_tokens_in_directory(
     directory_path: str,
     file_patterns: list[str] | None = None,
     recursive: bool = False,
-    encoding_name: str = "cl100k_base",
-    use_streaming: bool = False,
-    chunk_size: int = 1024 * 1024,
-    approximate: str | None = None,
-    tokens_per_word: float = TOKENS_PER_WORD,
-    characters_per_token: float = CHARACTERS_PER_TOKEN,
+    options: TokenCountOptions | None = None,
+    **kwargs,
 ) -> dict[str, int | str]:
     """Count tokens in multiple files matching patterns in a directory.
 
     Args:
-        directory_path: Path to directory to scan
-        file_patterns: List of glob patterns to match files (default: ["*.txt", "*.py", "*.md"])
-        recursive: Whether to search subdirectories
-        encoding_name: The name of the encoding to use
-        use_streaming: Whether to use streaming for large files
-        chunk_size: Size of chunks to read in bytes (for streaming)
-        approximate: Approximate the number of tokens without tokenizing
-        tokens_per_word: The number of tokens per word for approximation
-        characters_per_token: The number of characters per token for approximation
+        directory_path: Path to directory to scan.
+        file_patterns: List of glob patterns to match files (default: DEFAULT_FILE_PATTERNS).
+        recursive: Whether to search subdirectories.
+        options: Counting options. When None, defaults are used.
+        **kwargs: Legacy keyword arguments (encoding_name, use_streaming, chunk_size,
+            approximate, tokens_per_word, characters_per_token) merged into options.
 
     Returns:
-        Dict mapping filenames to token counts
+        Dict mapping filenames to token counts.
     """
+    opts = _merge_options(options, kwargs)
     if file_patterns is None:
-        file_patterns = ["*.txt", "*.py", "*.md"]
+        file_patterns = list(DEFAULT_FILE_PATTERNS)
     results: dict[str, int | str] = {}
     base_path = pathlib.Path(directory_path)
 
@@ -168,27 +260,39 @@ def count_tokens_in_directory(
 
         for file_path in base_path.glob(glob_pattern):
             try:
-                if use_streaming:
-                    results[str(file_path)] = count_tokens_in_large_file(
-                        str(file_path),
-                        encoding_name=encoding_name,
-                        chunk_size=chunk_size,
-                        approximate=approximate,
-                        tokens_per_word=tokens_per_word,
-                        characters_per_token=characters_per_token,
-                    )
-                else:
-                    results[str(file_path)] = count_tokens_in_file(
-                        str(file_path),
-                        encoding_name=encoding_name,
-                        approximate=approximate,
-                        tokens_per_word=tokens_per_word,
-                        characters_per_token=characters_per_token,
-                    )
+                results[str(file_path)] = _count_single_path(str(file_path), opts)
             except Exception as e:
                 results[str(file_path)] = f"Error: {e!s}"
 
     return results
+
+
+def _apply_max_tokens(result, max_tokens: int | None):
+    """Annotate counting results that exceed an optional token limit.
+
+    Args:
+        result: An integer token count or a dict of per-file counts.
+        max_tokens: Optional maximum token limit to check against.
+
+    Returns:
+        The original result, or a dict flagging where the limit is exceeded.
+    """
+    if max_tokens is None:
+        return result
+
+    if isinstance(result, int) and result > max_tokens:
+        return {"tokens": result, "limit_exceeded": True, "max_tokens": max_tokens}
+
+    if isinstance(result, dict):
+        for file_path, value in list(result.items()):
+            if isinstance(value, int) and value > max_tokens:
+                result[file_path] = {
+                    "tokens": value,
+                    "limit_exceeded": True,
+                    "max_tokens": max_tokens,
+                }
+
+    return result
 
 
 # Simple API for common use cases
@@ -196,89 +300,44 @@ def count(
     text: str | None = None,
     file: str | None = None,
     directory: str | None = None,
-    encoding: str = "cl100k_base",
-    file_patterns: list[str] | None = None,
-    recursive: bool = False,
-    use_streaming: bool = False,
-    chunk_size: int = 1024 * 1024,
-    approximate: str | None = None,
-    tokens_per_word: float = TOKENS_PER_WORD,
-    characters_per_token: float = CHARACTERS_PER_TOKEN,
+    options: TokenCountOptions | None = None,
     max_tokens: int | None = None,
+    **kwargs,
 ):
     """Count tokens with a simplified API.
 
     Args:
-        text: Text string to count (optional)
-        file: File path to count (optional)
-        directory: Directory path to count (optional)
-        encoding: Encoding to use
-        file_patterns: List of glob patterns when using directory mode (default: ["*.txt", "*.py", "*.md"])
-        recursive: Whether to search subdirectories
-        use_streaming: Whether to use streaming for large files
-        chunk_size: Size of chunks to read in bytes (for streaming)
-        approximate: Approximate the number of tokens without tokenizing
-        tokens_per_word: The number of tokens per word for approximation
-        characters_per_token: The number of characters per token for approximation
-        max_tokens: Optional maximum token limit to check against
+        text: Text string to count (optional).
+        file: File path to count (optional).
+        directory: Directory path to count (optional).
+        options: Counting options. When None, defaults are used.
+        max_tokens: Optional maximum token limit to check against.
+        **kwargs: Legacy keyword arguments. Counting options (encoding, approximate,
+            tokens_per_word, characters_per_token, use_streaming, chunk_size) are merged
+            into options; file_patterns and recursive control directory mode.
 
     Returns:
-        Token count or dictionary of counts for directory mode
+        Token count or dictionary of counts for directory mode.
     """
-    if file_patterns is None:
-        file_patterns: list[str] = ["*.txt", "*.py", "*.md"]
-    result = None
+    file_patterns = kwargs.pop("file_patterns", None) or list(DEFAULT_FILE_PATTERNS)
+    recursive = kwargs.pop("recursive", False)
+    opts = _merge_options(options, kwargs)
 
     if text is not None:
-        result: int = count_tokens_in_string(text, encoding)
+        result = count_tokens_in_string(text, opts.encoding_name)
     elif file is not None:
-        if use_streaming:
-            result = count_tokens_in_large_file(
-                file,
-                encoding_name=encoding,
-                chunk_size=chunk_size,
-                approximate=approximate,
-                tokens_per_word=tokens_per_word,
-                characters_per_token=characters_per_token,
-            )
-        else:
-            result = count_tokens_in_file(
-                file,
-                encoding_name=encoding,
-                approximate=approximate,
-                tokens_per_word=tokens_per_word,
-                characters_per_token=characters_per_token,
-            )
+        result = _count_single_path(file, opts)
     elif directory is not None:
         result = count_tokens_in_directory(
             directory,
             file_patterns=file_patterns,
             recursive=recursive,
-            encoding_name=encoding,
-            use_streaming=use_streaming,
-            chunk_size=chunk_size,
-            approximate=approximate,
-            tokens_per_word=tokens_per_word,
-            characters_per_token=characters_per_token,
+            options=opts,
         )
     else:
         raise ValueError("Either text, file, or directory must be provided")
 
-    # Check if result exceeds max_tokens if specified
-    if max_tokens is not None:
-        if isinstance(result, int) and result > max_tokens:
-            return {"tokens": result, "limit_exceeded": True, "max_tokens": max_tokens}
-        elif isinstance(result, dict):
-            # Add limit_exceeded flag to each file that exceeds the limit
-            for file_path, count in list(result.items()):
-                if isinstance(count, int) and count > max_tokens:
-                    result[file_path] = {
-                        "tokens": count,
-                        "limit_exceeded": True,
-                        "max_tokens": max_tokens,
-                    }
-
-    return result
+    return _apply_max_tokens(result, max_tokens)
 
 
 def _format_output(results, output_format="text"):
@@ -319,11 +378,11 @@ def _format_output(results, output_format="text"):
         return str(results)
 
 
-def main() -> None:
-    """Run the command line interface.
+def _build_parser() -> argparse.ArgumentParser:
+    """Build the command line argument parser.
 
     Returns:
-        None
+        The configured argument parser.
     """
     parser = argparse.ArgumentParser(
         description="Count the number of tokens in text files."
@@ -337,8 +396,8 @@ def main() -> None:
     parser.add_argument(
         "-e",
         "--encoding",
-        default="cl100k_base",
-        help="Encoding to use (default: cl100k_base)",
+        default=DEFAULT_ENCODING,
+        help=f"Encoding to use (default: {DEFAULT_ENCODING})",
     )
     parser.add_argument(
         "-a",
@@ -357,7 +416,7 @@ def main() -> None:
     parser.add_argument(
         "-p",
         "--pattern",
-        default="*.txt",
+        default=TXT_PATTERN,
         help="File pattern when using directory mode (comma-separated)",
     )
 
@@ -376,7 +435,7 @@ def main() -> None:
     parser.add_argument(
         "--chunk-size",
         type=int,
-        default=1024 * 1024,
+        default=DEFAULT_CHUNK_SIZE,
         help="Chunk size for streaming mode (bytes)",
     )
 
@@ -399,84 +458,99 @@ def main() -> None:
         help=f"Number of characters per token for character-based approximation (default: {CHARACTERS_PER_TOKEN})",
     )
 
-    args: Namespace = parser.parse_args()
+    return parser
 
-    # Common parameters
-    encoding_name = args.encoding
-    approximate = args.approx
-    tokens_per_word = args.tokens_per_word
-    characters_per_token = args.characters_per_token
-    output_format = args.format
-    use_streaming = args.stream
-    chunk_size = args.chunk_size
 
-    # Determine operation mode and get results
-    results = None
+def _options_from_args(args: Namespace) -> TokenCountOptions:
+    """Build TokenCountOptions from parsed CLI arguments.
 
-    # Directory mode
-    if args.directory:
-        patterns = args.pattern.split(",")
-        results = count_tokens_in_directory(
-            directory_path=args.directory,
-            file_patterns=[p.strip() for p in patterns],
-            recursive=args.recursive,
-            encoding_name=encoding_name,
-            use_streaming=use_streaming,
-            chunk_size=chunk_size,
-            approximate=approximate,
-            tokens_per_word=tokens_per_word,
-            characters_per_token=characters_per_token,
+    Args:
+        args: Parsed command line arguments.
+
+    Returns:
+        Counting options derived from the arguments.
+    """
+    return TokenCountOptions(
+        encoding_name=args.encoding,
+        approximate=args.approx,
+        tokens_per_word=args.tokens_per_word,
+        characters_per_token=args.characters_per_token,
+        use_streaming=args.stream,
+        chunk_size=args.chunk_size,
+    )
+
+
+def _print_single_file(
+    file_path: str, options: TokenCountOptions, num_tokens: int
+) -> None:
+    """Print the verbose single-file token report.
+
+    Args:
+        file_path: Path of the counted file.
+        options: Counting options used.
+        num_tokens: The computed token count.
+    """
+    print(f"File: {file_path}")
+    print(f"Encoding: {options.encoding_name}")
+    if options.approximate == "w":
+        print(
+            f"Approximation method: Words (tokens per word: {options.tokens_per_word})"
         )
-    # Single file mode
-    elif args.file:
-        file_path = args.file
-        if use_streaming:
-            num_tokens: int = count_tokens_in_large_file(
-                file_path=file_path,
-                encoding_name=encoding_name,
-                chunk_size=chunk_size,
-                approximate=approximate,
-                tokens_per_word=tokens_per_word,
-                characters_per_token=characters_per_token,
-            )
-        else:
-            num_tokens = count_tokens_in_file(
-                file_path=file_path,
-                encoding_name=encoding_name,
-                approximate=approximate,
-                tokens_per_word=tokens_per_word,
-                characters_per_token=characters_per_token,
-            )
+    elif options.approximate == "c":
+        print(
+            "Approximation method: Characters "
+            f"(characters per token: {options.characters_per_token})"
+        )
+    print(f"Number of tokens: {num_tokens}")
 
-        if not args.quiet and output_format == "text":
-            print(f"File: {file_path}")
-            print(f"Encoding: {encoding_name}")
-            if approximate == "w":
-                print(
-                    f"Approximation method: Words (tokens per word: {tokens_per_word})"
-                )
-            elif approximate == "c":
-                print(
-                    f"Approximation method: Characters (characters per token: {characters_per_token})"
-                )
-            print(f"Number of tokens: {num_tokens}")
-            return
-        results: int = num_tokens
-    else:
-        parser.print_help()
-        return
 
-    # Print results according to format
-    if args.quiet:
+def _print_results(results, quiet: bool, output_format: str) -> None:
+    """Print directory/file results respecting quiet and format settings.
+
+    Args:
+        results: An integer token count or a dict of per-file counts.
+        quiet: Whether to print only the bare number(s).
+        output_format: Output format (text, json, csv).
+    """
+    if quiet:
         if isinstance(results, dict):
-            total: int = sum(
-                count for count in results.values() if isinstance(count, int)
-            )
+            total = sum(c for c in results.values() if isinstance(c, int))
             print(total)
         else:
             print(results)
     else:
         print(_format_output(results, output_format))
+
+
+def main() -> None:
+    """Run the command line interface.
+
+    Returns:
+        None
+    """
+    parser = _build_parser()
+    args: Namespace = parser.parse_args()
+    options = _options_from_args(args)
+
+    if args.directory:
+        patterns = [p.strip() for p in args.pattern.split(",")]
+        results = count_tokens_in_directory(
+            args.directory,
+            file_patterns=patterns,
+            recursive=args.recursive,
+            options=options,
+        )
+    elif args.file:
+        num_tokens = _count_single_path(args.file, options)
+        if not args.quiet and args.format == "text":
+            _print_single_file(args.file, options, num_tokens)
+            return
+        results = num_tokens
+    else:
+        parser.print_help()
+        return
+
+    _print_results(results, args.quiet, args.format)
 
 
 if __name__ == "__main__":
