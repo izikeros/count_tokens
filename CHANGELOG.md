@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [unreleased]
+
+### ⚙️ Miscellaneous Tasks
+
+- Update ignored ruff rules
+- Update
+
+### Refa
+
+- Reduce complexity
+
+## [0.8.2] - 2026-04-19
+
+### ⚙️ Miscellaneous Tasks
+
+- *(release)* Bump version to 0.8.2
+
 ## [0.8.1] - 2026-02-02
 
 ### 🐛 Bug Fixes
